@@ -16,7 +16,7 @@
 module load cuda/cuda-12.6
 module load python/3.10
 
-pipi3 cache purge
+pip3 cache purge
 pip3 install -r requirements.txt
 
 python3 a3.py
