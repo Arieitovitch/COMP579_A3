@@ -358,7 +358,7 @@ def run_value_based_experiment(env_name, algorithm, use_replay_buffer, epsilon, 
     
     # Training loop
     episode_rewards = []
-    for episode in range(100):  # 1000 episodes as per assignment
+    for episode in range(1000):  # 1000 episodes as per assignment
         state, _ = env.reset(seed=seed+episode)  # Different seed each episode
         state = preprocess_state(state, env_name)
         done = False
