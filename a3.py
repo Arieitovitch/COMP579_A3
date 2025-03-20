@@ -56,18 +56,17 @@ class ValueBasedAgent:
         
         # Initialize Q-network
         self.model = DQN(n_observations, n_actions).to(device)
-        
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         self.criterion = nn.MSELoss()
         
-        # Initialize replay buffer if needed
+        # Use a replay buffer if specified, otherwise accumulate transitions in a list.
         if use_replay_buffer:
-            self.replay_buffer = deque(maxlen=1000000)  # 1M capacity
+            self.replay_buffer = deque(maxlen=1000000)
         else:
-            self.replay_buffer = []
-            
+            self.replay_buffer = []  # Accumulate transitions over an episode
+        
         self.batch_size = 64
-    
+
     def select_action(self, state):
         # Epsilon-greedy policy
         if random.random() < self.epsilon:
@@ -77,17 +76,26 @@ class ValueBasedAgent:
                 state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(device)
                 q_values = self.model(state_tensor)
                 return torch.argmax(q_values).item()
-    
+
+    def store_transition(self, state, action, reward, next_state, done):
+        # Append each new transition instead of overwriting
+        self.replay_buffer.append((state, action, reward, next_state, done))
+
     def update(self):
-        if not self.use_replay_buffer and not self.replay_buffer:
-            return 
+        # Return if no transitions are stored yet
+        if not self.replay_buffer:
+            return
+        
         if self.use_replay_buffer:
             if len(self.replay_buffer) < self.batch_size:
-                return 
+                return
             batch = random.sample(self.replay_buffer, self.batch_size)
         else:
-            batch = [self.replay_buffer[-1]] * self.batch_size 
-
+            # Wait until there are at least batch_size transitions, then use the last batch_size ones
+            if len(self.replay_buffer) < self.batch_size:
+                return
+            batch = self.replay_buffer[-self.batch_size:]
+        
         states, actions, rewards, next_states, dones = zip(*batch)
 
         states = torch.tensor(np.array(states), dtype=torch.float32).to(device)
@@ -108,7 +116,6 @@ class ValueBasedAgent:
                 for i in range(len(best_actions)):
                     probs[i, best_actions[i]] += (1 - self.epsilon)
                 next_q = (next_q_values * probs).sum(1)
-
             target_q = rewards + self.gamma * next_q * (1 - dones)
 
         loss = self.criterion(current_q, target_q)
@@ -117,14 +124,6 @@ class ValueBasedAgent:
         self.optimizer.step()
 
         return loss.item()
-
-    
-    def store_transition(self, state, action, reward, next_state, done):
-        # Store transition in replay buffer
-        if self.use_replay_buffer:
-            self.replay_buffer.append((state, action, reward, next_state, done))
-        else:
-            self.replay_buffer = [(state, action, reward, next_state, done)]
 
 #############################################
 # PART 2: POLICY-BASED METHODS
@@ -366,7 +365,7 @@ def run_value_based_experiment(env_name, algorithm, use_replay_buffer, epsilon, 
         truncated = False
         episode_reward = 0
         
-        while not (done):
+        while not (done or truncated):
             action = agent.select_action(state)
             next_state, reward, done, truncated, _ = env.step(action)
             next_state = preprocess_state(next_state, env_name)
@@ -449,18 +448,14 @@ def run_value_based_experiment(env_name, algorithm, use_replay_buffer, epsilon, 
 def run_all_value_based_experiments():
     """Run all experiments for value-based methods"""
     # Configuration parameters
-    # environments = ["Acrobot-v1", "ALE/Assault-ram-v5"]
-    environments = ["Acrobot-v1"]
+    environments = ["Acrobot-v1", "ALE/Assault-ram-v5"]
     algorithms = ["DQN", "ExpectedSARSA"]
-    # replay_buffer_options = [False, True]
-    replay_buffer_options = [False]
-    # epsilons = [1/4, 1/8, 1/16]
-    # learning_rates = [0.01, 0.001, 0.0001]
+    replay_buffer_options = [False, True]
+    epsilons = [1/4, 1/8, 1/16]
+    learning_rates = [0.01, 0.001, 0.0001]
     
-    epsilons = [1/4]
-    learning_rates = [0.001]
     
-    seeds = range(1)
+    seeds = range(10)
     
     # Dictionary to store all results
     all_results = {}
