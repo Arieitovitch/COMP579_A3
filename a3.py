@@ -448,14 +448,14 @@ def run_value_based_experiment(env_name, algorithm, use_replay_buffer, epsilon, 
 def run_all_value_based_experiments():
     """Run all experiments for value-based methods"""
     # Configuration parameters
-    environments = ["Acrobot-v1", "ALE/Assault-ram-v5"]
+    environments = ["Acrobot-v1"]
     algorithms = ["DQN", "ExpectedSARSA"]
     replay_buffer_options = [False, True]
     epsilons = [1/4, 1/8, 1/16]
     learning_rates = [0.01, 0.001, 0.0001]
     
     
-    seeds = range(10)
+    seeds = range(3)
     
     # Dictionary to store all results
     all_results = {}
